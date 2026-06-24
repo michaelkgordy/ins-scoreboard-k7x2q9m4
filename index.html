@@ -1,0 +1,408 @@
+<!DOCTYPE html><script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Ins Producer Contest Scoreboard Live",
+  "schemaVersion": 1,
+  "description": "Live scoreboard for the INS. Producer Contest. Weekly/Monthly toggle, ranked podium, score-detail table, and award winners. Reads standings.json from Google Drive, refreshed by the contest-daily-pull task.",
+  "mcpTools": [
+    "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__search_files",
+    "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__download_file_content"
+  ],
+  "mcpServerNames": [
+    "2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f",
+    "2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f"
+  ]
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INS. Producer Contest — Live Scoreboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --ink: #1a1d29;
+    --muted: #6b7280;
+    --line: #e6e8ef;
+    --accent: #2f4fe0;
+    --accent-soft: #eef1fe;
+    --gold: #d4a017;
+    --silver: #8a93a3;
+    --bronze: #b06b3a;
+    --green: #1f9d57;
+    --green-soft: #e7f6ee;
+    --red: #c23b3b;
+    --amber: #b7791f;
+    --amber-soft: #fdf3e2;
+    --shadow: 0 1px 3px rgba(20,25,50,.06), 0 6px 24px rgba(20,25,50,.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.45;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 22px 18px 48px; }
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  h1 { font-size: 21px; margin: 0; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .stamp { font-size: 12px; color: var(--muted); text-align: right; }
+  .stamp b { color: var(--ink); font-weight: 600; }
+  .src { display:inline-block; margin-top:4px; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .src.live { background: var(--green-soft); color: var(--green); }
+  .src.cached { background: var(--amber-soft); color: var(--amber); }
+  .src.loading { background: var(--accent-soft); color: var(--accent); }
+
+  .toggle { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin: 16px 0 18px; box-shadow: var(--shadow); }
+  .toggle button {
+    border: 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600;
+    padding: 7px 18px; border-radius: 999px; cursor: pointer; transition: .15s;
+  }
+  .toggle button.active { background: var(--accent); color: #fff; }
+  .winwin { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
+
+  .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  @media (max-width: 640px){ .podium { grid-template-columns: 1fr; } }
+  .pcard { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .pcard .rankbar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .r1 .rankbar { background: var(--gold); } .r2 .rankbar { background: var(--silver); } .r3 .rankbar { background: var(--bronze); }
+  .medal { font-size: 22px; line-height: 1; }
+  .pname { font-weight: 700; font-size: 15px; margin: 6px 0 2px; }
+  .ptotal { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+  .ptotal span { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .pbreak { margin-top: 10px; font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+  .pbreak b { color: var(--ink); font-weight: 600; }
+  .pbreak b.pen { color: var(--red); }
+
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 10px; font-weight: 700; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); font-size: 13px; }
+  th, td { padding: 9px 11px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { background: #fafbff; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.name { font-weight: 600; }
+  td.pen { color: var(--red); }
+
+  .awards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 10px; }
+  .award { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; box-shadow: var(--shadow); }
+  .award .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+  .award .who { font-weight: 700; font-size: 14px; margin-top: 3px; }
+  .award .pts { float: right; background: var(--green-soft); color: var(--green); font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+
+  .note { margin-top: 26px; padding: 13px 15px; background: var(--accent-soft); border: 1px solid #d7ddfb; border-radius: 12px; font-size: 12px; color: #33408a; }
+  .note b { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>🏆 INS. Producer Contest</h1>
+      <div class="sub" id="period-sub">—</div>
+    </div>
+    <div class="stamp">Last updated<br><b id="updated">—</b><br><span id="srcbadge" class="src loading">loading…</span></div>
+  </header>
+
+  <div class="toggle" role="tablist">
+    <button id="tab-weekly" class="active" onclick="setView('weekly')">Weekly</button>
+    <button id="tab-monthly" onclick="setView('monthly')">Monthly</button>
+  </div>
+  <p class="winwin" id="window-line">—</p>
+
+  <div class="podium" id="podium"></div>
+
+  <div class="section-title">Score detail</div>
+  <div style="overflow-x:auto;">
+    <table id="detail"><thead></thead><tbody></tbody></table>
+  </div>
+
+  <div class="section-title" id="awards-title">Weekly awards</div>
+  <div class="awards" id="awards"></div>
+
+  <div class="note">
+    <b>Live.</b> The morning <i>traq-daily-winners</i> task refreshes this board on every run. It writes
+    <i>standings.json</i> to your Google Drive and rewrites the snapshot embedded in this page, so both stay current.
+    On open it reads the live Drive copy; if the connector is unavailable it shows the embedded snapshot from the
+    last run. The badge by the date shows which source you are seeing.
+  </div>
+</div>
+
+<script type="application/json" id="fallback-data">
+{
+ "updated": "data through Jun 22, 2026 \u00b7 synced Jun 23, 2026 03:09 PM",
+ "weekly": {
+  "window": "Week of Jun 22, 2026 \u2013 Jun 28, 2026",
+  "rows": [
+   {
+    "producer": "Zach Wohleking",
+    "total": 71.74,
+    "coachable": 61.74,
+    "results": 0.0,
+    "awardpts": 10,
+    "pen": 0,
+    "rp": 4,
+    "rpavg": 79.0,
+    "callavg": 369,
+    "days": 1,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rank": 1
+   },
+   {
+    "producer": "Kate Blankenship",
+    "total": 57.18,
+    "coachable": 57.18,
+    "results": 0.0,
+    "awardpts": 0,
+    "pen": 0,
+    "rp": 2,
+    "rpavg": 81.5,
+    "callavg": 343,
+    "days": 1,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rank": 2
+   },
+   {
+    "producer": "Chris Goslin",
+    "total": 34.52,
+    "coachable": 29.52,
+    "results": 0.0,
+    "awardpts": 15,
+    "pen": 10,
+    "rp": 0,
+    "rpavg": 0,
+    "callavg": 492,
+    "days": 0,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rank": 3
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Top premium",
+    "who": "\u2014",
+    "pts": 25
+   },
+   {
+    "lbl": "Highest single policy",
+    "who": "\u2014",
+    "pts": 15
+   },
+   {
+    "lbl": "Most bundles",
+    "who": "\u2014",
+    "pts": 15
+   },
+   {
+    "lbl": "Highest call score",
+    "who": "Chris Goslin",
+    "pts": 15
+   },
+   {
+    "lbl": "Most role plays",
+    "who": "Zach Wohleking",
+    "pts": 10
+   },
+   {
+    "lbl": "Most improved",
+    "who": "\u2014 (needs prior-wk base)",
+    "pts": 20
+   }
+  ]
+ },
+ "monthly": {
+  "window": "Jun 01, 2026 \u2013 Jun 30, 2026",
+  "rows": [
+   {
+    "producer": "Chris Goslin",
+    "total": 291,
+    "base": 126.43,
+    "awardpts": 165,
+    "rp": 16,
+    "coach": 75.4,
+    "premium": 2132,
+    "policies": 2,
+    "bundles": 1,
+    "single": 1076,
+    "rank": 1
+   },
+   {
+    "producer": "Zach Wohleking",
+    "total": 182,
+    "base": 101.92,
+    "awardpts": 80,
+    "rp": 55,
+    "coach": 78.1,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "single": 0,
+    "rank": 2
+   },
+   {
+    "producer": "Kate Blankenship",
+    "total": 157,
+    "base": 116.71,
+    "awardpts": 40,
+    "rp": 29,
+    "coach": 76.6,
+    "premium": 1141,
+    "policies": 1,
+    "bundles": 0,
+    "single": 1141,
+    "rank": 3
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Premium champion",
+    "who": "Chris Goslin",
+    "pts": 75
+   },
+   {
+    "lbl": "Policy champion",
+    "who": "Chris Goslin",
+    "pts": 50
+   },
+   {
+    "lbl": "Bundle champion",
+    "who": "Chris Goslin",
+    "pts": 40
+   },
+   {
+    "lbl": "Highest single (mo.)",
+    "who": "Kate Blankenship",
+    "pts": 40
+   },
+   {
+    "lbl": "Practice leader",
+    "who": "Zach Wohleking",
+    "pts": 30
+   },
+   {
+    "lbl": "Coaching star",
+    "who": "Zach Wohleking",
+    "pts": 50
+   }
+  ]
+ }
+}
+</script>
+
+<script>
+/* Drive connector tools used to read the live feed. */
+const DRIVE_SEARCH   = "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__search_files";
+const DRIVE_DOWNLOAD = "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__download_file_content";
+
+/* Embedded fallback snapshot, rewritten on every run by the traq-daily-winners task
+   (it injects the latest standings into the #fallback-data block below). Shown only when the
+   live Drive read is unavailable. */
+const FALLBACK = JSON.parse(document.getElementById("fallback-data").textContent);
+
+let DATA = FALLBACK;
+const MEDALS = { 1:"🥇", 2:"🥈", 3:"🥉" };
+const money = v => "$" + Number(v).toLocaleString();
+const penTxt = p => p > 0 ? "−" + p : "0";
+let view = "weekly";
+
+function unwrap(r){ return (r && (r.structuredContent ?? (r.content && r.content[0] && JSON.parse(r.content[0].text)))) || null; }
+function b64utf8(s){ const bin = atob(s); const bytes = Uint8Array.from(bin, c => c.charCodeAt(0)); return new TextDecoder("utf-8").decode(bytes); }
+
+async function loadLive(){
+  if (!(window.cowork && window.cowork.callMcpTool)) throw new Error("no connector bridge");
+  const sr = unwrap(await window.cowork.callMcpTool(DRIVE_SEARCH, { query: "title = 'standings.json'" }));
+  const files = (sr && sr.files) || [];
+  const file = files.find(f => f.title === "standings.json") || files[0];
+  if (!file) throw new Error("standings.json not found in Drive");
+  const dr = unwrap(await window.cowork.callMcpTool(DRIVE_DOWNLOAD, { fileId: file.id }));
+  if (!dr || !dr.content) throw new Error("empty download");
+  return JSON.parse(b64utf8(dr.content));
+}
+
+function setBadge(kind, text){
+  const b = document.getElementById("srcbadge");
+  b.className = "src " + kind;
+  b.textContent = text;
+}
+
+function podiumCard(r){
+  const brk = view === "weekly"
+    ? `<b>${r.coachable.toFixed(1)}</b> coachable · <b>${r.results.toFixed(1)}</b> results · <b>${r.awardpts}</b> awards · <b class="pen">${penTxt(r.pen)}</b> pen`
+    : `<b>${r.awardpts}</b> award pts · <b>${r.rp}</b> role plays · coach <b>${r.coach}</b>`;
+  return `<div class="pcard r${r.rank}">
+    <span class="rankbar"></span>
+    <div class="medal">${MEDALS[r.rank]||""}</div>
+    <div class="pname">${r.producer}</div>
+    <div class="ptotal">${(+r.total).toFixed(view==='weekly'?1:0)} <span>pts</span></div>
+    <div class="pbreak">${brk}</div>
+  </div>`;
+}
+
+function renderDetail(d){
+  const head = view === "weekly"
+    ? ["Producer","RP #","RP avg","Call avg","Days","Premium","Policies","Bundles","Single","Coach","Result","Award","Pen","Total"]
+    : ["Producer","Role plays","Coach score","Premium","Policies","Bundles","Highest single","Award pts","Total"];
+  const thead = "<tr>" + head.map(h=>`<th>${h}</th>`).join("") + "</tr>";
+  const body = d.rows.map(r => {
+    if (view === "weekly") {
+      const cells = [r.producer, r.rp, r.rpavg.toFixed(1), r.callavg, r.days, money(r.premium), r.policies, r.bundles, money(r.single),
+         r.coachable.toFixed(1), r.results.toFixed(1), r.awardpts, penTxt(r.pen), r.total.toFixed(1)];
+      return "<tr>" + cells.map((c,i)=>
+        i===0 ? `<td class="name">${c}</td>` : (i===12 ? `<td class="pen">${c}</td>` : `<td>${c}</td>`)).join("") + "</tr>";
+    } else {
+      const cells = [r.producer, r.rp, r.coach.toFixed(1), money(r.premium), r.policies, r.bundles, money(r.single), r.awardpts, r.total.toFixed(0)];
+      return "<tr>" + cells.map((c,i)=> i===0 ? `<td class="name">${c}</td>` : `<td>${c}</td>`).join("") + "</tr>";
+    }
+  }).join("");
+  document.querySelector("#detail thead").innerHTML = thead;
+  document.querySelector("#detail tbody").innerHTML = body;
+}
+
+function render(){
+  const d = DATA[view];
+  const rows = d.rows.slice().sort((a,b)=>(a.rank||99)-(b.rank||99));
+  document.getElementById("period-sub").textContent = view==="weekly" ? "Weekly scoreboard" : "Monthly scoreboard";
+  document.getElementById("updated").textContent = DATA.updated;
+  document.getElementById("window-line").textContent = d.window;
+  document.getElementById("podium").innerHTML = rows.map(podiumCard).join("");
+  renderDetail(d);
+  document.getElementById("awards-title").textContent = view==="weekly" ? "Weekly awards" : "Monthly awards";
+  document.getElementById("awards").innerHTML = d.awards.map(a =>
+    `<div class="award"><span class="pts">+${a.pts}</span><div class="lbl">${a.lbl}</div><div class="who">${a.who}</div></div>`
+  ).join("");
+  document.getElementById("tab-weekly").classList.toggle("active", view==="weekly");
+  document.getElementById("tab-monthly").classList.toggle("active", view==="monthly");
+}
+function setView(v){ view = v; render(); }
+
+render();              // paint fallback immediately
+(async () => {
+  try {
+    const live = await loadLive();
+    DATA = live;
+    setBadge("live", "live · Drive");
+  } catch (e) {
+    // Embedded data is rewritten each run by the traq-daily-winners task,
+    // so the fallback is current even when the Drive connector is unavailable.
+    setBadge("cached", "daily snapshot");
+    console.warn("Live Drive read unavailable, showing daily-refreshed embedded data:", e && e.message);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
