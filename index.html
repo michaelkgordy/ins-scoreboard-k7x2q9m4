@@ -2,7 +2,7 @@
 {
   "name": "Ins Producer Contest Scoreboard Live",
   "schemaVersion": 1,
-  "description": "Live scoreboard for the INS. Producer Contest. Weekly/Monthly toggle, ranked podium, score-detail table, and award winners. Reads standings.json from Google Drive, refreshed by the contest-daily-pull task.",
+  "description": "Live scoreboard for the INS. Producer Contest. This week / last week / this month / last month toggle, ranked podium, score-detail table, and award winners. Reads standings.json from Google Drive, refreshed by the traq-daily-winners task.",
   "mcpTools": [
     "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__search_files",
     "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__download_file_content"
@@ -55,10 +55,10 @@
   .src.cached { background: var(--amber-soft); color: var(--amber); }
   .src.loading { background: var(--accent-soft); color: var(--accent); }
 
-  .toggle { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin: 16px 0 18px; box-shadow: var(--shadow); }
+  .toggle { display: inline-flex; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin: 16px 0 18px; box-shadow: var(--shadow); }
   .toggle button {
     border: 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600;
-    padding: 7px 18px; border-radius: 999px; cursor: pointer; transition: .15s;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: .15s; white-space: nowrap;
   }
   .toggle button.active { background: var(--accent); color: #fff; }
   .winwin { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
@@ -107,8 +107,10 @@
   </header>
 
   <div class="toggle" role="tablist">
-    <button id="tab-weekly" class="active" onclick="setView('weekly')">Weekly</button>
-    <button id="tab-monthly" onclick="setView('monthly')">Monthly</button>
+    <button id="tab-weekly" class="active" onclick="setView('weekly')">This week</button>
+    <button id="tab-last_week" onclick="setView('last_week')">Last week</button>
+    <button id="tab-monthly" onclick="setView('monthly')">This month</button>
+    <button id="tab-last_month" onclick="setView('last_month')">Last month</button>
   </div>
   <p class="winwin" id="window-line">—</p>
 
@@ -132,7 +134,7 @@
 
 <script type="application/json" id="fallback-data">
 {
- "updated": "data through Jul 10, 2026 \u00b7 synced Jul 13, 2026 09:14 AM",
+ "updated": "data through Jul 10, 2026 \u00b7 synced Jul 13, 2026 09:26 AM",
  "weekly": {
   "window": "Week of Jul 13, 2026 \u2013 Jul 19, 2026",
   "rows": [
@@ -224,6 +226,97 @@
    }
   ]
  },
+ "last_week": {
+  "window": "Week of Jul 06, 2026 \u2013 Jul 12, 2026",
+  "rows": [
+   {
+    "producer": "Zach Wohleking",
+    "total": 184.77,
+    "coachable": 97.56,
+    "results": 47.21,
+    "awardpts": 40,
+    "pen": 0,
+    "rp": 10,
+    "rpavg": 84.6,
+    "callavg": 562,
+    "days": 5,
+    "premium": 3721,
+    "policies": 2,
+    "bundles": 0,
+    "life": 0,
+    "single": 2306,
+    "rank": 1
+   },
+   {
+    "producer": "Chris Goslin",
+    "total": 124.2,
+    "coachable": 89.2,
+    "results": 0.0,
+    "awardpts": 45,
+    "pen": 10,
+    "rp": 12,
+    "rpavg": 76.2,
+    "callavg": 579,
+    "days": 4,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rank": 2
+   },
+   {
+    "producer": "Kate Blankenship",
+    "total": 49.22,
+    "coachable": 79.22,
+    "results": 0.0,
+    "awardpts": 0,
+    "pen": 30,
+    "rp": 6,
+    "rpavg": 82.3,
+    "callavg": 572,
+    "days": 3,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rank": 3
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Top premium",
+    "who": "Zach Wohleking",
+    "pts": 25
+   },
+   {
+    "lbl": "Highest single policy",
+    "who": "Zach Wohleking",
+    "pts": 15
+   },
+   {
+    "lbl": "Most bundles",
+    "who": "\u2014",
+    "pts": 15
+   },
+   {
+    "lbl": "Highest call score",
+    "who": "Chris Goslin",
+    "pts": 15
+   },
+   {
+    "lbl": "Most role plays",
+    "who": "Chris Goslin",
+    "pts": 10
+   },
+   {
+    "lbl": "Most improved",
+    "who": "Chris Goslin",
+    "pts": 20
+   }
+  ]
+ },
  "monthly": {
   "window": "Jul 01, 2026 \u2013 Jul 31, 2026",
   "rows": [
@@ -299,6 +392,82 @@
     "pts": 50
    }
   ]
+ },
+ "last_month": {
+  "window": "Jun 01, 2026 \u2013 Jun 30, 2026",
+  "rows": [
+   {
+    "producer": "Zach Wohleking",
+    "total": 682,
+    "base": 486.54,
+    "awardpts": 195,
+    "rp": 70,
+    "coach": 79.1,
+    "premium": 4494,
+    "policies": 1,
+    "bundles": 0,
+    "single": 4494,
+    "rank": 1
+   },
+   {
+    "producer": "Chris Goslin",
+    "total": 348,
+    "base": 258.16,
+    "awardpts": 90,
+    "rp": 27,
+    "coach": 74.5,
+    "premium": 3723,
+    "policies": 3,
+    "bundles": 1,
+    "single": 1591,
+    "rank": 2
+   },
+   {
+    "producer": "Kate Blankenship",
+    "total": 315,
+    "base": 315.46,
+    "awardpts": 0,
+    "rp": 41,
+    "coach": 76.4,
+    "premium": 4209,
+    "policies": 2,
+    "bundles": 0,
+    "single": 3068,
+    "rank": 3
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Premium champion",
+    "who": "Zach Wohleking",
+    "pts": 75
+   },
+   {
+    "lbl": "Policy champion",
+    "who": "Chris Goslin",
+    "pts": 50
+   },
+   {
+    "lbl": "Bundle champion",
+    "who": "Chris Goslin",
+    "pts": 40
+   },
+   {
+    "lbl": "Highest single (mo.)",
+    "who": "Zach Wohleking",
+    "pts": 40
+   },
+   {
+    "lbl": "Practice leader",
+    "who": "Zach Wohleking",
+    "pts": 30
+   },
+   {
+    "lbl": "Coaching star",
+    "who": "Zach Wohleking",
+    "pts": 50
+   }
+  ]
  }
 }
 </script>
@@ -339,26 +508,28 @@ function setBadge(kind, text){
   b.textContent = text;
 }
 
+function isWeek(v){ return v === "weekly" || v === "last_week"; }
+
 function podiumCard(r){
-  const brk = view === "weekly"
+  const brk = isWeek(view)
     ? `<b>${r.coachable.toFixed(1)}</b> coachable · <b>${r.results.toFixed(1)}</b> results · <b>${r.awardpts}</b> awards · <b class="pen">${penTxt(r.pen)}</b> pen`
     : `<b>${r.awardpts}</b> award pts · <b>${r.rp}</b> role plays · coach <b>${r.coach}</b>`;
   return `<div class="pcard r${r.rank}">
     <span class="rankbar"></span>
     <div class="medal">${MEDALS[r.rank]||""}</div>
     <div class="pname">${r.producer}</div>
-    <div class="ptotal">${(+r.total).toFixed(view==='weekly'?1:0)} <span>pts</span></div>
+    <div class="ptotal">${(+r.total).toFixed(isWeek(view)?1:0)} <span>pts</span></div>
     <div class="pbreak">${brk}</div>
   </div>`;
 }
 
 function renderDetail(d){
-  const head = view === "weekly"
+  const head = isWeek(view)
     ? ["Producer","RP #","RP avg","Call avg","Days","Premium","Policies","Bundles","Single","Coach","Result","Award","Pen","Total"]
     : ["Producer","Role plays","Coach score","Premium","Policies","Bundles","Highest single","Award pts","Total"];
   const thead = "<tr>" + head.map(h=>`<th>${h}</th>`).join("") + "</tr>";
   const body = d.rows.map(r => {
-    if (view === "weekly") {
+    if (isWeek(view)) {
       const cells = [r.producer, r.rp, r.rpavg.toFixed(1), r.callavg, r.days, money(r.premium), r.policies, r.bundles, money(r.single),
          r.coachable.toFixed(1), r.results.toFixed(1), r.awardpts, penTxt(r.pen), r.total.toFixed(1)];
       return "<tr>" + cells.map((c,i)=>
@@ -372,20 +543,33 @@ function renderDetail(d){
   document.querySelector("#detail tbody").innerHTML = body;
 }
 
+const VIEW_LABEL = {
+  weekly: "This week\u2019s scoreboard",
+  last_week: "Last week\u2019s scoreboard",
+  monthly: "This month\u2019s scoreboard",
+  last_month: "Last month\u2019s scoreboard",
+};
+const AWARDS_LABEL = {
+  weekly: "This week\u2019s awards",
+  last_week: "Last week\u2019s awards",
+  monthly: "This month\u2019s awards",
+  last_month: "Last month\u2019s awards",
+};
+const TABS = ["weekly","last_week","monthly","last_month"];
+
 function render(){
   const d = DATA[view];
   const rows = d.rows.slice().sort((a,b)=>(a.rank||99)-(b.rank||99));
-  document.getElementById("period-sub").textContent = view==="weekly" ? "Weekly scoreboard" : "Monthly scoreboard";
+  document.getElementById("period-sub").textContent = VIEW_LABEL[view] || "\u2014";
   document.getElementById("updated").textContent = DATA.updated;
   document.getElementById("window-line").textContent = d.window;
   document.getElementById("podium").innerHTML = rows.map(podiumCard).join("");
   renderDetail(d);
-  document.getElementById("awards-title").textContent = view==="weekly" ? "Weekly awards" : "Monthly awards";
+  document.getElementById("awards-title").textContent = AWARDS_LABEL[view] || "Awards";
   document.getElementById("awards").innerHTML = d.awards.map(a =>
     `<div class="award"><span class="pts">+${a.pts}</span><div class="lbl">${a.lbl}</div><div class="who">${a.who}</div></div>`
   ).join("");
-  document.getElementById("tab-weekly").classList.toggle("active", view==="weekly");
-  document.getElementById("tab-monthly").classList.toggle("active", view==="monthly");
+  TABS.forEach(t => document.getElementById("tab-"+t).classList.toggle("active", view===t));
 }
 function setView(v){ view = v; render(); }
 
