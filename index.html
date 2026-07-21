@@ -124,74 +124,79 @@
   <div class="section-title" id="awards-title">Weekly awards</div>
   <div class="awards" id="awards"></div>
 
-  <div class="note"><b>Updated daily.</b> The INS. contest task refreshes this board every morning with the latest role-play, call, and sales numbers. Refresh your browser to see the current standings.</div>
+  <div class="note">
+    <b>Live.</b> The morning <i>traq-daily-winners</i> task refreshes this board on every run. It writes
+    <i>standings.json</i> to your Google Drive and rewrites the snapshot embedded in this page, so both stay current.
+    On open it reads the live Drive copy; if the connector is unavailable it shows the embedded snapshot from the
+    last run. The badge by the date shows which source you are seeing.
+  </div>
 </div>
 
 <script type="application/json" id="fallback-data">
 {
- "updated": "data through Jul 26, 2026 \u00b7 synced Jul 21, 2026 08:20 AM",
+ "updated": "data through Jul 26, 2026 \u00b7 synced Jul 21, 2026 10:12 AM",
  "weekly": {
   "window": "Week of Jul 20, 2026 \u2013 Jul 26, 2026",
   "rows": [
    {
     "producer": "Zach Wohleking",
-    "total": 99.64,
-    "coachable": 74.64,
+    "total": 74.2,
+    "coachable": 49.2,
     "results": 0.0,
     "awardpts": 25,
     "pen": 0,
-    "rp": 2,
-    "rpavg": 89.0,
+    "rp": 4,
+    "rpavg": 85.5,
     "callavg": 584,
-    "days": 1,
+    "days": 2,
     "premium": 0,
     "policies": 0,
     "bundles": 0,
     "life": 0,
     "single": 0,
-    "rppts": 0,
+    "rppts": 34.2,
     "callpts": 0,
-    "actpts": 0,
-    "dials": 0,
-    "talkmin": 0,
-    "quotes": 0,
+    "actpts": 15,
+    "dials": 192,
+    "talkmin": 64,
+    "quotes": 5,
     "eligible": false,
     "rank": 1
    },
    {
     "producer": "Kate Blankenship",
-    "total": 45.38,
-    "coachable": 35.38,
+    "total": 10.7,
+    "coachable": 0.7,
     "results": 0.0,
     "awardpts": 10,
     "pen": 0,
-    "rp": 2,
-    "rpavg": 78.0,
+    "rp": 4,
+    "rpavg": 78.2,
     "callavg": 3,
-    "days": 1,
+    "days": 2,
     "premium": 0,
     "policies": 0,
     "bundles": 0,
     "life": 0,
     "single": 0,
-    "rppts": 0,
+    "rppts": 15.7,
     "callpts": 0,
-    "actpts": 0,
-    "dials": 0,
-    "talkmin": 0,
+    "actpts": -15,
+    "dials": 53,
+    "talkmin": 13,
     "quotes": 0,
     "eligible": false,
     "rank": 2
    },
    {
     "producer": "Chris Goslin",
-    "total": 43.18,
-    "coachable": 53.18,
+    "total": -3.5,
+    "coachable": -3.5,
     "results": 0.0,
     "awardpts": 0,
-    "pen": 10,
-    "rp": 1,
-    "rpavg": 50.0,
+    "pen": 0,
+    "rp": 2,
+    "rpavg": 74.5,
     "callavg": 553,
     "days": 1,
     "premium": 0,
@@ -199,12 +204,12 @@
     "bundles": 0,
     "life": 0,
     "single": 0,
-    "rppts": 0,
+    "rppts": 7.5,
     "callpts": 0,
-    "actpts": 0,
-    "dials": 0,
-    "talkmin": 0,
-    "quotes": 0,
+    "actpts": -11,
+    "dials": 56,
+    "talkmin": 14,
+    "quotes": 1,
     "eligible": false,
     "rank": 3
    }
@@ -361,11 +366,11 @@
   "rows": [
    {
     "producer": "Zach Wohleking",
-    "total": 717,
-    "base": 472.01,
+    "total": 692,
+    "base": 446.57,
     "awardpts": 245,
-    "rp": 26,
-    "coach": 84.3,
+    "rp": 28,
+    "coach": 84.1,
     "premium": 3721,
     "policies": 2,
     "bundles": 0,
@@ -375,11 +380,11 @@
    },
    {
     "producer": "Chris Goslin",
-    "total": 417,
-    "base": 297.1,
+    "total": 380,
+    "base": 260.42,
     "awardpts": 120,
-    "rp": 25,
-    "coach": 74.9,
+    "rp": 26,
+    "coach": 75.8,
     "premium": 1823,
     "policies": 2,
     "bundles": 1,
@@ -389,11 +394,11 @@
    },
    {
     "producer": "Kate Blankenship",
-    "total": 310,
-    "base": 309.62,
+    "total": 275,
+    "base": 274.94,
     "awardpts": 0,
-    "rp": 23,
-    "coach": 77.3,
+    "rp": 25,
+    "coach": 77.4,
     "premium": 1086.15,
     "policies": 1,
     "bundles": 0,
@@ -630,8 +635,20 @@ function render(){
 }
 function setView(v){ view = v; render(); }
 
-render();
-  setBadge("live", "updated daily");
+render();              // paint fallback immediately
+(async () => {
+  try {
+    const live = await loadLive();
+    DATA = live;
+    setBadge("live", "live · Drive");
+  } catch (e) {
+    // Embedded data is rewritten each run by the traq-daily-winners task,
+    // so the fallback is current even when the Drive connector is unavailable.
+    setBadge("cached", "daily snapshot");
+    console.warn("Live Drive read unavailable, showing daily-refreshed embedded data:", e && e.message);
+  }
+  render();
+})();
 </script>
 </body>
 </html>
