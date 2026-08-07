@@ -1,0 +1,580 @@
+<!DOCTYPE html><script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Ins Producer Contest Scoreboard Live",
+  "schemaVersion": 1,
+  "description": "Live scoreboard for the INS. Producer Contest. This week / last week / this month / last month toggle, ranked podium, score-detail table, and award winners. Reads standings.json from Google Drive, refreshed by the traq-daily-winners task.",
+  "mcpTools": [
+    "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__search_files",
+    "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__download_file_content"
+  ],
+  "mcpServerNames": [
+    "2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f",
+    "2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f"
+  ]
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INS. Producer Contest — Live Scoreboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --ink: #1a1d29;
+    --muted: #6b7280;
+    --line: #e6e8ef;
+    --accent: #2f4fe0;
+    --accent-soft: #eef1fe;
+    --gold: #d4a017;
+    --silver: #8a93a3;
+    --bronze: #b06b3a;
+    --green: #1f9d57;
+    --green-soft: #e7f6ee;
+    --red: #c23b3b;
+    --amber: #b7791f;
+    --amber-soft: #fdf3e2;
+    --shadow: 0 1px 3px rgba(20,25,50,.06), 0 6px 24px rgba(20,25,50,.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.45;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 22px 18px 48px; }
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  h1 { font-size: 21px; margin: 0; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .stamp { font-size: 12px; color: var(--muted); text-align: right; }
+  .stamp b { color: var(--ink); font-weight: 600; }
+  .src { display:inline-block; margin-top:4px; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .src.live { background: var(--green-soft); color: var(--green); }
+  .src.cached { background: var(--amber-soft); color: var(--amber); }
+  .src.loading { background: var(--accent-soft); color: var(--accent); }
+
+  .toggle { display: inline-flex; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin: 16px 0 18px; box-shadow: var(--shadow); }
+  .toggle button {
+    border: 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: .15s; white-space: nowrap;
+  }
+  .toggle button.active { background: var(--accent); color: #fff; }
+  .winwin { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
+
+  .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  @media (max-width: 640px){ .podium { grid-template-columns: 1fr; } }
+  .pcard { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .pcard .rankbar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .r1 .rankbar { background: var(--gold); } .r2 .rankbar { background: var(--silver); } .r3 .rankbar { background: var(--bronze); }
+  .medal { font-size: 22px; line-height: 1; }
+  .pname { font-weight: 700; font-size: 15px; margin: 6px 0 2px; }
+  .ptotal { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+  .ptotal span { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .pbreak { margin-top: 10px; font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+  .pbreak b { color: var(--ink); font-weight: 600; }
+  .pbreak b.pen { color: var(--red); }
+
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 10px; font-weight: 700; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); font-size: 13px; }
+  th, td { padding: 9px 11px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { background: #fafbff; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.name { font-weight: 600; }
+  td.pen { color: var(--red); }
+
+  .awards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 10px; }
+  .award { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; box-shadow: var(--shadow); }
+  .award .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+  .award .who { font-weight: 700; font-size: 14px; margin-top: 3px; }
+  .award .pts { float: right; background: var(--green-soft); color: var(--green); font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+
+  .note { margin-top: 26px; padding: 13px 15px; background: var(--accent-soft); border: 1px solid #d7ddfb; border-radius: 12px; font-size: 12px; color: #33408a; }
+  .note b { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>🏆 INS. Producer Contest</h1>
+      <div class="sub" id="period-sub">—</div>
+    </div>
+    <div class="stamp">Last updated<br><b id="updated">—</b><br><span id="srcbadge" class="src loading">loading…</span></div>
+  </header>
+
+  <div class="toggle" role="tablist">
+    <button id="tab-weekly" class="active" onclick="setView('weekly')">This week</button>
+    <button id="tab-last_week" onclick="setView('last_week')">Last week</button>
+    <button id="tab-monthly" onclick="setView('monthly')">This month</button>
+    <button id="tab-last_month" onclick="setView('last_month')">Last month</button>
+  </div>
+  <p class="winwin" id="window-line">—</p>
+
+  <div class="podium" id="podium"></div>
+
+  <div class="section-title">Score detail</div>
+  <div style="overflow-x:auto;">
+    <table id="detail"><thead></thead><tbody></tbody></table>
+  </div>
+
+  <div class="section-title" id="awards-title">Weekly awards</div>
+  <div class="awards" id="awards"></div>
+
+  <div class="note">
+    <b>Live.</b> The morning <i>traq-daily-winners</i> task refreshes this board on every run. It writes
+    <i>standings.json</i> to your Google Drive and rewrites the snapshot embedded in this page, so both stay current.
+    On open it reads the live Drive copy; if the connector is unavailable it shows the embedded snapshot from the
+    last run. The badge by the date shows which source you are seeing.
+  </div>
+</div>
+
+<script type="application/json" id="fallback-data">
+{
+ "updated": "data through Aug 09, 2026 \u00b7 synced Aug 06, 2026 08:21 AM",
+ "weekly": {
+  "window": "Week of Aug 03, 2026 \u2013 Aug 09, 2026",
+  "rows": [
+   {
+    "producer": "Zach Wohleking",
+    "total": 99.4,
+    "coachable": 74.4,
+    "results": 0.0,
+    "awardpts": 25,
+    "pen": 0,
+    "rp": 6,
+    "rpavg": 85.7,
+    "callavg": 441,
+    "days": 3,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rppts": 51.4,
+    "xcpts": 0,
+    "callpts": 24,
+    "actpts": -1,
+    "dials": 556,
+    "talkmin": 103,
+    "quotes": 6,
+    "eligible": false,
+    "rank": 1
+   },
+   {
+    "producer": "Chris Goslin",
+    "total": -28.5,
+    "coachable": 1.5,
+    "results": 0.0,
+    "awardpts": 0,
+    "pen": 30,
+    "rp": 2,
+    "rpavg": 83.0,
+    "callavg": 302,
+    "days": 1,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rppts": 12.5,
+    "xcpts": 0,
+    "callpts": 0,
+    "actpts": -11,
+    "dials": 119,
+    "talkmin": 43,
+    "quotes": 1,
+    "eligible": false,
+    "rank": 2
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Top premium",
+    "who": "\u2014",
+    "pts": 25
+   },
+   {
+    "lbl": "Highest single policy",
+    "who": "\u2014",
+    "pts": 15
+   },
+   {
+    "lbl": "Most bundles",
+    "who": "\u2014",
+    "pts": 15
+   },
+   {
+    "lbl": "Highest call score",
+    "who": "Zach Wohleking",
+    "pts": 15
+   },
+   {
+    "lbl": "Most role plays",
+    "who": "Zach Wohleking",
+    "pts": 10
+   },
+   {
+    "lbl": "Most improved",
+    "who": "\u2014",
+    "pts": 10
+   }
+  ],
+  "winner": null
+ },
+ "last_week": {
+  "window": "Week of Jul 27, 2026 \u2013 Aug 02, 2026",
+  "rows": [
+   {
+    "producer": "Zach Wohleking",
+    "total": 266.0,
+    "coachable": 241.0,
+    "results": 0.0,
+    "awardpts": 25,
+    "pen": 0,
+    "rp": 10,
+    "rpavg": 84.0,
+    "callavg": 403,
+    "days": 5,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rppts": 84.0,
+    "xcpts": 0,
+    "callpts": 46,
+    "actpts": 101,
+    "dials": 992,
+    "talkmin": 264,
+    "quotes": 24,
+    "eligible": false,
+    "rank": 1
+   },
+   {
+    "producer": "Chris Goslin",
+    "total": 27.73,
+    "coachable": 37.73,
+    "results": 0.0,
+    "awardpts": 0,
+    "pen": 10,
+    "rp": 9,
+    "rpavg": 79.7,
+    "callavg": 273,
+    "days": 5,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "life": 0,
+    "single": 0,
+    "rppts": 49.8,
+    "xcpts": 2.93,
+    "callpts": 0,
+    "actpts": -25,
+    "dials": 881,
+    "talkmin": 239,
+    "quotes": 7,
+    "eligible": false,
+    "rank": 2
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Top premium",
+    "who": "\u2014",
+    "pts": 25
+   },
+   {
+    "lbl": "Highest single policy",
+    "who": "\u2014",
+    "pts": 15
+   },
+   {
+    "lbl": "Most bundles",
+    "who": "\u2014",
+    "pts": 15
+   },
+   {
+    "lbl": "Highest call score",
+    "who": "Zach Wohleking",
+    "pts": 15
+   },
+   {
+    "lbl": "Most role plays",
+    "who": "Zach Wohleking",
+    "pts": 10
+   },
+   {
+    "lbl": "Most improved",
+    "who": "\u2014",
+    "pts": 10
+   }
+  ],
+  "winner": null
+ },
+ "monthly": {
+  "window": "Aug 01, 2026 \u2013 Aug 31, 2026",
+  "rows": [
+   {
+    "producer": "Zach Wohleking",
+    "total": 179,
+    "base": 99.4,
+    "awardpts": 80,
+    "rp": 6,
+    "coach": 85.7,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "single": 0,
+    "eligible": false,
+    "rank": 1
+   },
+   {
+    "producer": "Chris Goslin",
+    "total": -28,
+    "base": -28.5,
+    "awardpts": 0,
+    "rp": 2,
+    "coach": 83.0,
+    "premium": 0,
+    "policies": 0,
+    "bundles": 0,
+    "single": 0,
+    "eligible": false,
+    "rank": 2
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Premium champion",
+    "who": "\u2014",
+    "pts": 75
+   },
+   {
+    "lbl": "Policy champion",
+    "who": "\u2014",
+    "pts": 50
+   },
+   {
+    "lbl": "Bundle champion",
+    "who": "\u2014",
+    "pts": 40
+   },
+   {
+    "lbl": "Highest single (mo.)",
+    "who": "\u2014",
+    "pts": 40
+   },
+   {
+    "lbl": "Practice leader",
+    "who": "Zach Wohleking",
+    "pts": 30
+   },
+   {
+    "lbl": "Coaching star",
+    "who": "Zach Wohleking",
+    "pts": 50
+   },
+   {
+    "lbl": "Most improved (mo.)",
+    "who": "\u2014",
+    "pts": 30
+   }
+  ],
+  "winner": null
+ },
+ "last_month": {
+  "window": "Jul 01, 2026 \u2013 Jul 31, 2026",
+  "rows": [
+   {
+    "producer": "Zach Wohleking",
+    "total": 1253,
+    "base": 1007.93,
+    "awardpts": 245,
+    "rp": 44,
+    "coach": 84.2,
+    "premium": 8047,
+    "policies": 4,
+    "bundles": 0,
+    "single": 2579,
+    "eligible": true,
+    "rank": 1
+   },
+   {
+    "producer": "Chris Goslin",
+    "total": 396,
+    "base": 356.05,
+    "awardpts": 40,
+    "rp": 41,
+    "coach": 77.2,
+    "premium": 1823,
+    "policies": 2,
+    "bundles": 1,
+    "single": 1506,
+    "eligible": true,
+    "rank": 2
+   }
+  ],
+  "awards": [
+   {
+    "lbl": "Premium champion",
+    "who": "Zach Wohleking",
+    "pts": 75
+   },
+   {
+    "lbl": "Policy champion",
+    "who": "Zach Wohleking",
+    "pts": 50
+   },
+   {
+    "lbl": "Bundle champion",
+    "who": "Chris Goslin",
+    "pts": 40
+   },
+   {
+    "lbl": "Highest single (mo.)",
+    "who": "Zach Wohleking",
+    "pts": 40
+   },
+   {
+    "lbl": "Practice leader",
+    "who": "Zach Wohleking",
+    "pts": 30
+   },
+   {
+    "lbl": "Coaching star",
+    "who": "Zach Wohleking",
+    "pts": 50
+   },
+   {
+    "lbl": "Most improved (mo.)",
+    "who": "\u2014",
+    "pts": 30
+   }
+  ],
+  "winner": "Zach Wohleking"
+ }
+}
+</script>
+
+<script>
+/* Drive connector tools used to read the live feed. */
+const DRIVE_SEARCH   = "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__search_files";
+const DRIVE_DOWNLOAD = "mcp__2f5ffdf9-74b4-4b49-a303-4c7bf6e5494f__download_file_content";
+
+/* Embedded fallback snapshot, rewritten on every run by the traq-daily-winners task
+   (it injects the latest standings into the #fallback-data block below). Shown only when the
+   live Drive read is unavailable. */
+const FALLBACK = JSON.parse(document.getElementById("fallback-data").textContent);
+
+let DATA = FALLBACK;
+const MEDALS = { 1:"🥇", 2:"🥈", 3:"🥉" };
+const money = v => "$" + Number(v).toLocaleString();
+const penTxt = p => p > 0 ? "−" + p : "0";
+let view = "weekly";
+
+function unwrap(r){ return (r && (r.structuredContent ?? (r.content && r.content[0] && JSON.parse(r.content[0].text)))) || null; }
+function b64utf8(s){ const bin = atob(s); const bytes = Uint8Array.from(bin, c => c.charCodeAt(0)); return new TextDecoder("utf-8").decode(bytes); }
+
+async function loadLive(){
+  if (!(window.cowork && window.cowork.callMcpTool)) throw new Error("no connector bridge");
+  const sr = unwrap(await window.cowork.callMcpTool(DRIVE_SEARCH, { query: "title = 'standings.json'" }));
+  const files = (sr && sr.files) || [];
+  const file = files.find(f => f.title === "standings.json") || files[0];
+  if (!file) throw new Error("standings.json not found in Drive");
+  const dr = unwrap(await window.cowork.callMcpTool(DRIVE_DOWNLOAD, { fileId: file.id }));
+  if (!dr || !dr.content) throw new Error("empty download");
+  return JSON.parse(b64utf8(dr.content));
+}
+
+function setBadge(kind, text){
+  const b = document.getElementById("srcbadge");
+  b.className = "src " + kind;
+  b.textContent = text;
+}
+
+function isWeek(v){ return v === "weekly" || v === "last_week"; }
+
+function podiumCard(r){
+  const brk = isWeek(view)
+    ? `<b>${r.coachable.toFixed(1)}</b> coachable · <b>${r.results.toFixed(1)}</b> results · <b>${r.awardpts}</b> awards · <b class="pen">${penTxt(r.pen)}</b> pen`
+    : `<b>${r.awardpts}</b> award pts · <b>${r.rp}</b> role plays · coach <b>${r.coach}</b>`;
+  return `<div class="pcard r${r.rank}">
+    <span class="rankbar"></span>
+    <div class="medal">${MEDALS[r.rank]||""}</div>
+    <div class="pname">${r.producer}</div>
+    <div class="ptotal">${(+r.total).toFixed(isWeek(view)?1:0)} <span>pts</span></div>
+    <div class="pbreak">${brk}</div>
+  </div>`;
+}
+
+function renderDetail(d){
+  const head = isWeek(view)
+    ? ["Producer","RP #","RP avg","Call avg","Days","Premium","Policies","Bundles","Single","Coach","Result","Award","Pen","Total"]
+    : ["Producer","Role plays","Coach score","Premium","Policies","Bundles","Highest single","Award pts","Total"];
+  const thead = "<tr>" + head.map(h=>`<th>${h}</th>`).join("") + "</tr>";
+  const body = d.rows.map(r => {
+    if (isWeek(view)) {
+      const cells = [r.producer, r.rp, r.rpavg.toFixed(1), r.callavg, r.days, money(r.premium), r.policies, r.bundles, money(r.single),
+         r.coachable.toFixed(1), r.results.toFixed(1), r.awardpts, penTxt(r.pen), r.total.toFixed(1)];
+      return "<tr>" + cells.map((c,i)=>
+        i===0 ? `<td class="name">${c}</td>` : (i===12 ? `<td class="pen">${c}</td>` : `<td>${c}</td>`)).join("") + "</tr>";
+    } else {
+      const cells = [r.producer, r.rp, r.coach.toFixed(1), money(r.premium), r.policies, r.bundles, money(r.single), r.awardpts, r.total.toFixed(0)];
+      return "<tr>" + cells.map((c,i)=> i===0 ? `<td class="name">${c}</td>` : `<td>${c}</td>`).join("") + "</tr>";
+    }
+  }).join("");
+  document.querySelector("#detail thead").innerHTML = thead;
+  document.querySelector("#detail tbody").innerHTML = body;
+}
+
+const VIEW_LABEL = {
+  weekly: "This week\u2019s scoreboard",
+  last_week: "Last week\u2019s scoreboard",
+  monthly: "This month\u2019s scoreboard",
+  last_month: "Last month\u2019s scoreboard",
+};
+const AWARDS_LABEL = {
+  weekly: "This week\u2019s awards",
+  last_week: "Last week\u2019s awards",
+  monthly: "This month\u2019s awards",
+  last_month: "Last month\u2019s awards",
+};
+const TABS = ["weekly","last_week","monthly","last_month"];
+
+function render(){
+  const d = DATA[view];
+  const rows = d.rows.slice().sort((a,b)=>(a.rank||99)-(b.rank||99));
+  document.getElementById("period-sub").textContent = VIEW_LABEL[view] || "\u2014";
+  document.getElementById("updated").textContent = DATA.updated;
+  document.getElementById("window-line").textContent = d.window;
+  document.getElementById("podium").innerHTML = rows.map(podiumCard).join("");
+  renderDetail(d);
+  document.getElementById("awards-title").textContent = AWARDS_LABEL[view] || "Awards";
+  document.getElementById("awards").innerHTML = d.awards.map(a =>
+    `<div class="award"><span class="pts">+${a.pts}</span><div class="lbl">${a.lbl}</div><div class="who">${a.who}</div></div>`
+  ).join("");
+  TABS.forEach(t => document.getElementById("tab-"+t).classList.toggle("active", view===t));
+}
+function setView(v){ view = v; render(); }
+
+render();              // paint fallback immediately
+(async () => {
+  try {
+    const live = await loadLive();
+    DATA = live;
+    setBadge("live", "live · Drive");
+  } catch (e) {
+    // Embedded data is rewritten each run by the traq-daily-winners task,
+    // so the fallback is current even when the Drive connector is unavailable.
+    setBadge("cached", "daily snapshot");
+    console.warn("Live Drive read unavailable, showing daily-refreshed embedded data:", e && e.message);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
